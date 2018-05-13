@@ -1,0 +1,48 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "k8s_dnsPrefix":{
+            "value": ""
+        },
+        "k8s_Version":{
+            "value": "1.9.6"
+        },
+        "k8s_agentPools": {
+            "value": [
+                {
+                    "name": "frontend",
+                    "count": 1,
+                    "vmSize": "Standard_D2_v3",
+                    "osDiskSizeGB": 30,
+                    "storageProfile": "ManagedDisks",
+                    "vnetSubnetID": "/subscriptions/<subid>/resourceGroups/<rg name>/providers/Microsoft.Network/virtualNetworks/<vnet name>/subnets/<subnet name>",
+                    "osType": "Linux"
+                }
+            ]
+        },
+        "k8s_aksName":{
+            "value": ""
+        },
+        "k8s_enableRBAC" : {
+            "value": false
+        },
+        "k8s_enableOMS": {
+            "value": true
+        },
+        "k8s_OMSResourceId": {
+            "value": "/subscriptions/<subid>/resourcegroups/<rg name>/providers/microsoft.operationalinsights/workspaces/<workspace name>"
+        },
+        "k8s_servicePrincipal": {
+            "value": "<service principal app id>"
+        },
+        "k8s_servicePrincipalSecret": {
+            "reference": {
+                "keyVault":{
+                    "id": "/subscriptions/<subid>/resourceGroups/<rg name>/providers/Microsoft.KeyVault/vaults/<keyvault name>"
+                },
+                "secretName": "<secretname>"
+            }
+        }
+    }
+  }

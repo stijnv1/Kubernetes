@@ -1,0 +1,130 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "k8s_dnsPrefix":{
+            "type": "string"
+        },
+        "k8s_Version":{
+            "type": "string"
+        },
+        "k8s_agentPools": {
+            "type": "array"
+        },
+        "k8s_aksName": {
+            "type": "string"
+        },
+        "k8s_enableRBAC": {
+            "type": "bool"
+        },
+        "k8s_enableOMS": {
+            "type": "bool"
+        },
+        "k8s_OMSResourceId": {
+            "type": "string"
+        },
+        "k8s_networkPlugin": {
+            "type": "string",
+            "defaultValue": "azure"
+        },
+        "k8s_serviceCidr": {
+            "type": "string",
+            "defaultValue": "192.168.0.0/16"
+        },
+        "k8s_dnsServiceIP": {
+            "type": "string",
+            "defaultValue": "192.168.0.10"
+        },
+        "k8s_dockerBridgeCidr": {
+            "type": "string",
+            "defaultValue": "172.17.0.1/16"
+        },
+        "k8s_servicePrincipal": {
+            "type": "string"
+        },
+        "k8s_servicePrincipalSecret": {
+            "type": "securestring"
+        }
+    },
+    "variables": {
+        "apiversions":{
+            "aks": "2018-03-31",
+            "Resources":{
+                "deployments": "2017-05-10"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[parameters('k8s_aksName')]",
+            "type": "Microsoft.ContainerService/managedClusters",
+            "apiVersion": "[variables('apiversions').aks]",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "properties": {
+              "dnsPrefix": "[parameters('k8s_dnsPrefix')]",
+              "enableRBAC": "[parameters('k8s_enableRBAC')]",
+              "kubernetesVersion": "[parameters('k8s_Version')]",
+              "addonProfiles": {
+                  "omsagent":{
+                      "enabled": "[parameters('k8s_enableOMS')]",
+                      "config": {
+                        "logAnalyticsWorkspaceResourceID": "[parameters('k8s_OMSResourceId')]"
+                      }
+                  }
+              },
+              "agentPoolProfiles": "[parameters('k8s_agentPools')]",
+              "servicePrincipalProfile": {
+                "clientId": "[parameters('k8s_servicePrincipal')]",
+                "secret": "[parameters('k8s_servicePrincipalSecret')]"
+              },
+              "networkProfile": {
+                "networkPlugin": "[parameters('k8s_networkPlugin')]",
+                "serviceCidr": "[parameters('k8s_serviceCidr')]",
+                "dnsServiceIP": "[parameters('k8s_dnsServiceIP')]",
+                "dockerBridgeCidr": "[parameters('k8s_dockerBridgeCidr')]"
+              }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "SolutionDeployment",
+            "apiVersion": "[variables('apiversions').Resources.deployments]",
+            "resourceGroup": "[split(parameters('k8s_OMSResourceId'),'/')[4]]",
+            "subscriptionId": "[split(parameters('k8s_OMSResourceId'),'/')[2]]",
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2015-11-01-preview",
+                            "type": "Microsoft.OperationsManagement/solutions",
+                            "location": "[resourceGroup().location]",
+                            "name": "[concat('ContainerInsights', '(', split(parameters('k8s_OMSResourceId'),'/')[8], ')')]",
+                            "properties": {
+                                "workspaceResourceId": "[parameters('k8s_OMSResourceId')]"
+                            },
+                            "plan": {
+                                "name": "[concat('ContainerInsights', '(', split(parameters('k8s_OMSResourceId'),'/')[8], ')')]",
+                                "product": "[concat('OMSGallery/', 'ContainerInsights')]",
+                                "promotionCode": "",
+                                "publisher": "Microsoft"
+                            }
+                        }
+                    ]
+                }
+            },
+            "dependsOn": []
+        }
+    ],
+    "outputs": {
+        "controlPlaneFQDN": {
+            "type": "string",
+            "value": "[reference(concat('Microsoft.ContainerService/managedClusters/', parameters('k8s_aksName'))).fqdn]"
+        }
+    }
+}
